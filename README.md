@@ -17,7 +17,21 @@ Practice Exam Studio is a powerful, local-first web application designed to help
 Before running this application, you must have **Node.js** installed.
 
 1.  **Get Node.js:** Go to [nodejs.org](https://nodejs.org/) and download the "LTS" (Long Term Support) version for your operating system.
-2.  **Get an API Key:** You need a Google Gemini API Key. Get one for free at [aistudio.google.com](https://aistudio.google.com/).
+2.  **Get an API Key:** You need a Google Gemini API Key. See the section below for instructions.
+
+---
+
+## 🔑 Getting Your Google Gemini API Key
+
+This application uses the **Google Gemini API** to intelligently parse your study materials.
+
+1.  **Go to Google AI Studio:** [https://aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
+2.  **Sign in** with your Google account.
+3.  Click **"Create API key"**.
+4.  Select **"Create API key in new project"** (or use an existing one if you have it).
+5.  **Copy the key** (it starts with `AIza...`).
+
+*Note: The API is free to use within rate limits, which are generous enough for personal use.*
 
 ---
 
