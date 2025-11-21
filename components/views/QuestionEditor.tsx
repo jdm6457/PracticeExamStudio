@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { Question, Option, DropdownItem, DropZone } from '../../types';
 import { Button } from '../ui';
-import { PlusIcon, TrashIcon } from '../icons';
+import { PlusIcon, TrashIcon, UploadIcon, XIcon } from '../icons';
+import { fileToBase64 } from '../../services/fileUtils';
 
 interface QuestionEditorProps {
   question: Question;
@@ -11,6 +12,7 @@ interface QuestionEditorProps {
 
 const QuestionEditor: React.FC<QuestionEditorProps> = ({ question, onSave, onCancel }) => {
   const [editedQuestion, setEditedQuestion] = useState<Question>({ ...question });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setEditedQuestion({ ...question });
@@ -18,6 +20,33 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({ question, onSave, onCan
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setEditedQuestion(prev => ({ ...prev, text: e.target.value }));
+  };
+
+  // --- Image Handlers ---
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const base64 = await fileToBase64(file);
+      // Add data prefix if missing (fileToBase64 usually returns just the base64 string in this project utils, 
+      // but we need to check how it's being used. The utils provided returns raw base64 without prefix).
+      // We need to prepend the mime type for the img src to work.
+      const mimeType = file.type; 
+      const fullBase64 = `data:${mimeType};base64,${base64}`;
+      
+      setEditedQuestion(prev => ({ ...prev, imageUrl: fullBase64 }));
+    } catch (error) {
+      console.error("Error uploading image", error);
+      alert("Failed to upload image.");
+    }
+    
+    // Reset input
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeImage = () => {
+    setEditedQuestion(prev => ({ ...prev, imageUrl: undefined }));
   };
 
   // --- Standard Option Handlers (Shared by Single/Multiple/DragDrop as Source) ---
@@ -151,9 +180,11 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({ question, onSave, onCan
   };
 
   return (
-    <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-      <div>
-        <div className="flex justify-between items-center mb-1">
+    <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+      
+      {/* Question Text & Image */}
+      <div className="space-y-3">
+        <div className="flex justify-between items-center">
              <label className="block text-sm font-medium">Question Text</label>
              {editedQuestion.type === 'dropdown' && (
                  <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Tip: Use <code>{`{{dropdown}}`}</code> to place dropdowns inline</span>
@@ -166,8 +197,44 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({ question, onSave, onCan
           className="w-full p-2 border rounded-md bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 font-mono text-sm"
           placeholder={editedQuestion.type === 'dropdown' ? "e.g. Code snippet...\nvar x = {{dropdown}};\nif (x) { {{dropdown}} }" : ""}
         />
+        
+        {/* Image Upload Section */}
+        <div>
+            <label className="block text-sm font-medium mb-2">Question Image (Optional)</label>
+            {editedQuestion.imageUrl ? (
+                <div className="relative inline-block group">
+                    <img 
+                        src={editedQuestion.imageUrl} 
+                        alt="Question attachment" 
+                        className="h-32 w-auto object-contain rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900"
+                    />
+                    <button 
+                        onClick={removeImage}
+                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full shadow-md hover:bg-red-600 transition-colors"
+                    >
+                        <XIcon className="w-4 h-4" />
+                    </button>
+                </div>
+            ) : (
+                <div className="flex items-center gap-3">
+                    <input 
+                        type="file" 
+                        accept="image/*" 
+                        ref={fileInputRef} 
+                        onChange={handleImageUpload} 
+                        className="hidden" 
+                    />
+                    <Button variant="secondary" onClick={() => fileInputRef.current?.click()} className="text-sm">
+                        <UploadIcon className="w-4 h-4 mr-2" />
+                        Upload Image
+                    </Button>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">Supports PNG, JPG, GIF</span>
+                </div>
+            )}
+        </div>
       </div>
-       <div>
+
+      <div>
         <label className="block text-sm font-medium mb-1">Question Type</label>
         <select value={editedQuestion.type} onChange={handleTypeChange} className="w-full p-2 border rounded-md bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600">
             <option value="single">Single Choice</option>

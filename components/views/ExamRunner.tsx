@@ -253,6 +253,17 @@ const ExamRunner: React.FC<ExamRunnerProps> = ({ bank, questions, onFinish }) =>
 
             <div className="bg-white dark:bg-slate-800 p-6 md:p-10 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700 flex-grow overflow-y-auto">
                 
+                {/* --- Image Attachment --- */}
+                {currentQuestion.imageUrl && (
+                    <div className="mb-8 flex justify-center">
+                        <img 
+                            src={currentQuestion.imageUrl} 
+                            alt="Question Reference" 
+                            className="max-w-full max-h-[400px] object-contain rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900" 
+                        />
+                    </div>
+                )}
+
                 {/* --- Inline Dropdown Content --- */}
                 {isInlineDropdown ? (
                     <div className="mb-10 space-y-4">

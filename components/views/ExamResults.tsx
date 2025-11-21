@@ -134,8 +134,16 @@ const ExamResults: React.FC<ExamResultsProps> = ({ bank, questions, userAnswers,
                     return (
                         <div key={q.id} className="p-6 bg-white dark:bg-slate-800 rounded-xl shadow-lg">
                             <div className="flex justify-between items-start gap-4">
-                                <div className="font-semibold text-lg flex gap-1 w-full">
-                                    <span>{index + 1}.</span>
+                                <div className="font-semibold text-lg w-full">
+                                    <span className="mr-1">{index + 1}.</span>
+                                    
+                                    {/* Image in review */}
+                                    {q.imageUrl && (
+                                        <div className="my-4">
+                                            <img src={q.imageUrl} alt="Question Reference" className="max-w-full max-h-[300px] object-contain rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900" />
+                                        </div>
+                                    )}
+
                                     {isInlineDropdown ? (
                                          <div className="w-full font-mono text-base leading-relaxed whitespace-pre-wrap bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 overflow-x-auto">
                                             {q.text.split(/{{\s*dropdown\s*}}/i).map((part, i) => (

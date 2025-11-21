@@ -18,6 +18,7 @@ export interface Question {
   id: string;
   text: string;
   type: QuestionType;
+  imageUrl?: string; // Base64 string of the attached image
   options: Option[]; // Used for single/multiple/drag_drop (as source items)
   dropdowns?: DropdownItem[]; // Used for dropdown type
   dropZones?: DropZone[]; // Used for drag_drop type
