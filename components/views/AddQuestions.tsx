@@ -2,10 +2,10 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useAppContext } from '../../App';
 import type { Question } from '../../types';
-import { parseTextForQuestions, parseImageForQuestions } from '../../services/geminiService';
+import { parseTextForQuestions, parseImageForQuestions, generateQuestionsFromTopic } from '../../services/geminiService';
 import { fileToBase64, extractTextFromPdf } from '../../services/fileUtils';
 import { Button, Spinner, RichText } from '../ui';
-import { UploadIcon, CheckIcon } from '../icons';
+import { UploadIcon, CheckIcon, SparklesIcon } from '../icons';
 
 interface AddQuestionsProps {
     onQuestionsAdded: (questions: Question[]) => void;
@@ -16,7 +16,11 @@ const AddQuestions: React.FC<AddQuestionsProps> = ({ onQuestionsAdded }) => {
     const [textInput, setTextInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [parsedQuestions, setParsedQuestions] = useState<Question[]>([]);
-    const [activeTab, setActiveTab] = useState<'text' | 'file'>('text');
+    const [activeTab, setActiveTab] = useState<'text' | 'file' | 'generate'>('text');
+    
+    // Generator state
+    const [topicInput, setTopicInput] = useState('');
+    const [generateCount, setGenerateCount] = useState(5);
 
     const handleParse = useCallback(async (content: string, type: 'text' | 'image' | 'pdf', file?: File) => {
         setIsLoading(true);
@@ -49,6 +53,24 @@ const AddQuestions: React.FC<AddQuestionsProps> = ({ onQuestionsAdded }) => {
         handleParse(textInput, 'text');
     };
 
+    const handleGenerate = async () => {
+        if (!topicInput.trim()) {
+            addToast("Please enter a topic.", "error");
+            return;
+        }
+        setIsLoading(true);
+        setParsedQuestions([]);
+        try {
+            const questions = await generateQuestionsFromTopic(topicInput, generateCount);
+            setParsedQuestions(questions);
+            addToast(`${questions.length} questions generated successfully.`, 'success');
+        } catch (error) {
+            addToast(error instanceof Error ? error.message : "Generation failed.", "error");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const onDrop = useCallback((acceptedFiles: File[]) => {
         const file = acceptedFiles[0];
         if (file) {
@@ -66,6 +88,8 @@ const AddQuestions: React.FC<AddQuestionsProps> = ({ onQuestionsAdded }) => {
     useEffect(() => {
         const handlePaste = (e: ClipboardEvent) => {
             if (isLoading) return;
+            // Only listen to paste on the 'text' tab to avoid confusion on other tabs
+            if (activeTab !== 'text') return;
             
             const items = e.clipboardData?.items;
             if (!items) return;
@@ -85,7 +109,7 @@ const AddQuestions: React.FC<AddQuestionsProps> = ({ onQuestionsAdded }) => {
 
         window.addEventListener('paste', handlePaste);
         return () => window.removeEventListener('paste', handlePaste);
-    }, [handleParse, isLoading, addToast]);
+    }, [handleParse, isLoading, addToast, activeTab]);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
@@ -97,6 +121,7 @@ const AddQuestions: React.FC<AddQuestionsProps> = ({ onQuestionsAdded }) => {
         onQuestionsAdded(parsedQuestions);
         setParsedQuestions([]);
         setTextInput('');
+        setTopicInput('');
     };
 
     return (
@@ -108,6 +133,9 @@ const AddQuestions: React.FC<AddQuestionsProps> = ({ onQuestionsAdded }) => {
                     </button>
                     <button onClick={() => setActiveTab('file')} className={`${activeTab === 'file' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm focus:outline-none`}>
                         Upload File
+                    </button>
+                    <button onClick={() => setActiveTab('generate')} className={`${activeTab === 'generate' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm focus:outline-none flex items-center gap-2`}>
+                        <SparklesIcon className="w-4 h-4 text-yellow-500" /> AI Generate
                     </button>
                 </nav>
             </div>
@@ -135,10 +163,44 @@ const AddQuestions: React.FC<AddQuestionsProps> = ({ onQuestionsAdded }) => {
                 </div>
             )}
 
+            {activeTab === 'generate' && (
+                <div className="space-y-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Topic / Subject</label>
+                        <input 
+                            type="text" 
+                            value={topicInput} 
+                            onChange={(e) => setTopicInput(e.target.value)}
+                            className="w-full p-2 border rounded-md bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 focus:ring-indigo-500 focus:border-indigo-500" 
+                            placeholder="e.g. Python List Comprehensions, Azure Fundamentals, Biology 101"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Number of Questions</label>
+                        <input 
+                            type="number" 
+                            min="1" 
+                            max="20" 
+                            value={generateCount} 
+                            onChange={(e) => setGenerateCount(parseInt(e.target.value) || 5)}
+                            className="w-full p-2 border rounded-md bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 focus:ring-indigo-500 focus:border-indigo-500" 
+                        />
+                        <p className="text-xs text-slate-500 mt-1">AI will generate a random mix of question types (Single, Multiple, Dropdown, Drag & Drop).</p>
+                    </div>
+                    <div className="flex justify-end">
+                        <Button onClick={handleGenerate} disabled={isLoading || !topicInput.trim()}>
+                            {isLoading ? <><Spinner size="sm" /> Generating...</> : <><SparklesIcon className="w-4 h-4 text-yellow-300 mr-2"/> Generate Questions</>}
+                        </Button>
+                    </div>
+                </div>
+            )}
+
             {isLoading && (
                 <div className="flex flex-col items-center justify-center p-8 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
                     <Spinner />
-                    <p className="mt-4 text-slate-600 dark:text-slate-300">AI is parsing your questions...</p>
+                    <p className="mt-4 text-slate-600 dark:text-slate-300">
+                        {activeTab === 'generate' ? "AI is creating your exam..." : "AI is parsing your questions..."}
+                    </p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">This may take a moment.</p>
                 </div>
             )}
@@ -149,14 +211,28 @@ const AddQuestions: React.FC<AddQuestionsProps> = ({ onQuestionsAdded }) => {
                     <div className="max-h-64 overflow-y-auto space-y-2 p-3 bg-slate-100 dark:bg-slate-900 rounded-md">
                         {parsedQuestions.map((q, i) => (
                              <div key={i} className="p-3 bg-white dark:bg-slate-800 rounded-md text-sm border border-slate-200 dark:border-slate-700">
-                                <RichText text={q.text} className="font-bold" />
-                                <ul className="pl-4 mt-1">
-                                    {q.options.map(opt => (
-                                        <li key={opt.label} className={q.correctAnswers.includes(opt.label) ? 'text-green-600 dark:text-green-400' : ''}>
-                                            {opt.label}) {opt.text}
-                                        </li>
-                                    ))}
-                                </ul>
+                                <div className="flex justify-between">
+                                    <span className="text-xs font-bold uppercase text-indigo-500">{q.type}</span>
+                                </div>
+                                <RichText text={q.text} className="font-bold mt-1" />
+                                
+                                {q.type === 'drag_drop' ? (
+                                    <div className="mt-1 pl-2 border-l-2 border-indigo-200">
+                                        <p className="text-xs font-semibold">Drop Zones:</p>
+                                        <ul className="pl-4 text-xs list-disc">
+                                            {q.dropZones?.map((z, idx) => <li key={idx}>{z.label || `Zone ${idx+1}`} (Correct: {q.correctAnswers[idx]})</li>)}
+                                        </ul>
+                                    </div>
+                                ) : (
+                                    <ul className="pl-4 mt-1">
+                                        {q.options.map(opt => (
+                                            <li key={opt.label} className={q.correctAnswers.includes(opt.label) ? 'text-green-600 dark:text-green-400' : ''}>
+                                                {opt.label}) {opt.text}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                                
                                 {q.explanation && (
                                     <div className="mt-2 text-xs text-slate-500 dark:text-slate-400 italic border-t border-slate-200 dark:border-slate-700 pt-1">
                                         <span className="font-semibold not-italic">Explanation:</span> 

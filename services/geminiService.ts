@@ -98,6 +98,20 @@ Handle these question types:
 
 Identify the question text, options, correct answers, and any explanation. Preserve formatting. Return ONLY a valid JSON array.`;
 
+const GENERATION_PROMPT_TEMPLATE = `You are an expert exam question creator. 
+Create {{COUNT}} practice exam questions on the topic: "{{TOPIC}}".
+
+Requirements:
+1. **Variety**: Use a mix of question types randomly: Single Choice, Multiple Choice, Dropdown (inline), and Drag & Drop.
+2. **Difficulty**: Create questions that test deep understanding.
+3. **Format**:
+   - For 'dropdown' types, create questions that require completing a sentence or code snippet. Use '{{dropdown}}' markers in the text.
+   - For 'drag_drop' types, create scenarios where items need to be ordered or matched to categories.
+4. **Output**: Return ONLY a valid JSON array matching the schema provided.
+
+Topic context:
+{{TOPIC}}`;
+
 const addIds = (questions: any[]): Question[] => {
     return questions.map(q => ({ 
         ...q, 
@@ -111,6 +125,17 @@ const addIds = (questions: any[]): Question[] => {
 
 // Helper to wait
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Helper to get client securely
+const getAiClient = () => {
+    // The API key must be obtained exclusively from the environment variable process.env.API_KEY
+    const key = process.env.API_KEY;
+
+    if (!key) {
+        throw new Error("Missing API Key. Please add API_KEY to your .env file or environment variables.");
+    }
+    return new GoogleGenAI({ apiKey: key });
+};
 
 // Retry wrapper for API calls
 const generateContentWithRetry = async (ai: GoogleGenAI, params: any, retries = 3): Promise<GenerateContentResponse> => {
@@ -136,7 +161,7 @@ const generateContentWithRetry = async (ai: GoogleGenAI, params: any, retries = 
 
 export const parseTextForQuestions = async (text: string): Promise<Question[]> => {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || " " });
+        const ai = getAiClient();
 
         const prompt = PROMPT_TEMPLATE.replace('{{TEXT_CONTENT}}', text);
 
@@ -158,6 +183,10 @@ export const parseTextForQuestions = async (text: string): Promise<Question[]> =
     } catch (error: any) {
         console.error("Error parsing text with Gemini:", error);
         
+        if (error.message.includes("Missing API Key")) {
+            throw error;
+        }
+        
         // Provide better error message for UI
         if (error.status === 429 || error.code === 429) {
              throw new Error("The AI service is currently busy (Quota Exceeded). Please try again in a few moments.");
@@ -169,7 +198,7 @@ export const parseTextForQuestions = async (text: string): Promise<Question[]> =
 
 export const parseImageForQuestions = async (base64Image: string, mimeType: string): Promise<Question[]> => {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || " " });
+        const ai = getAiClient();
 
         const imagePart = {
             inlineData: {
@@ -200,10 +229,51 @@ export const parseImageForQuestions = async (base64Image: string, mimeType: stri
     } catch (error: any) {
         console.error("Error parsing image with Gemini:", error);
         
+        if (error.message.includes("Missing API Key")) {
+            throw error;
+        }
+
         if (error.status === 429 || error.code === 429) {
              throw new Error("The AI service is currently busy (Quota Exceeded). Please try again in a few moments.");
         }
 
         throw new Error(`Failed to parse questions from image: ${error.message || "Unknown error"}`);
+    }
+};
+
+export const generateQuestionsFromTopic = async (topic: string, count: number): Promise<Question[]> => {
+    try {
+        const ai = getAiClient();
+
+        const prompt = GENERATION_PROMPT_TEMPLATE
+            .replace('{{TOPIC}}', topic)
+            .replace('{{COUNT}}', count.toString());
+
+        const response = await generateContentWithRetry(ai, {
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: fullSchema,
+            }
+        });
+
+        if (!response.text) {
+            throw new Error("The AI returned an empty response.");
+        }
+
+        const jsonResponse = JSON.parse(response.text);
+        return addIds(jsonResponse);
+    } catch (error: any) {
+        console.error("Error generating questions with Gemini:", error);
+        
+        if (error.message.includes("Missing API Key")) {
+            throw error;
+        }
+
+         if (error.status === 429 || error.code === 429) {
+             throw new Error("The AI service is currently busy (Quota Exceeded). Please try again in a few moments.");
+        }
+        throw new Error(`Failed to generate questions: ${error.message || "Unknown error"}`);
     }
 };
