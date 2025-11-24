@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAppContext } from '../../App';
 import type { QuestionBank } from '../../types';
 import { Button } from '../ui';
@@ -6,7 +6,23 @@ import { Button } from '../ui';
 const ImportExport: React.FC = () => {
     const { banks, setBanks, addToast } = useAppContext();
     const [bankToExport, setBankToExport] = useState<string>('');
+    const [storageUsage, setStorageUsage] = useState<string>('0 MB');
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        // Calculate estimated storage usage
+        const calculateUsage = async () => {
+            try {
+                const json = JSON.stringify(banks);
+                const bytes = new Blob([json]).size;
+                const mb = (bytes / (1024 * 1024)).toFixed(2);
+                setStorageUsage(`${mb} MB`);
+            } catch (e) {
+                setStorageUsage('Unknown');
+            }
+        };
+        calculateUsage();
+    }, [banks]);
 
     const handleExport = () => {
         const bank = banks.find(b => b.id === bankToExport);
@@ -51,7 +67,7 @@ const ImportExport: React.FC = () => {
                     questions: importedData.questions,
                 };
                 
-                setBanks([...banks, newBank]);
+                setBanks(prev => [...prev, newBank]);
                 addToast(`Successfully imported "${newBank.name}".`, "success");
 
             } catch (error) {
@@ -69,6 +85,20 @@ const ImportExport: React.FC = () => {
     return (
         <div className="space-y-8">
             <h1 className="text-3xl font-bold">Import / Export</h1>
+
+            {/* Storage Info Card */}
+            <div className="p-6 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800 flex justify-between items-center">
+                <div>
+                    <h3 className="font-bold text-blue-900 dark:text-blue-300">High-Capacity Storage Active</h3>
+                    <p className="text-sm text-blue-800 dark:text-blue-400 mt-1">
+                        Your data is safely stored using IndexedDB.
+                    </p>
+                </div>
+                <div className="text-right">
+                    <p className="text-xs text-blue-600 dark:text-blue-400 uppercase font-bold tracking-wider">Current Size</p>
+                    <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">{storageUsage}</p>
+                </div>
+            </div>
 
             <div className="p-8 bg-white dark:bg-slate-800 rounded-xl shadow-lg">
                 <h2 className="text-xl font-bold mb-4">Export a Question Bank</h2>
