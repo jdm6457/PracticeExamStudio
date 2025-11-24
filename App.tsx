@@ -10,12 +10,12 @@ import { ToastContainer } from './components/ui';
 
 interface AppContextType {
     banks: QuestionBank[];
-    setBanks: (banks: QuestionBank[]) => void;
+    setBanks: (value: QuestionBank[] | ((val: QuestionBank[]) => QuestionBank[])) => void;
     history: ExamResult[];
     addResult: (result: ExamResult) => void;
     deleteHistory: (id: string) => void;
     activeBankId: string | null;
-    setActiveBankId: (id: string | null) => void;
+    setActiveBankId: (value: string | null | ((val: string | null) => string | null)) => void;
     addToast: (message: string, type?: ToastMessage['type']) => void;
 }
 

@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import type { Question } from '../types';
 
 const questionSchema = {
@@ -109,13 +109,38 @@ const addIds = (questions: any[]): Question[] => {
     }));
 };
 
+// Helper to wait
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Retry wrapper for API calls
+const generateContentWithRetry = async (ai: GoogleGenAI, params: any, retries = 3): Promise<GenerateContentResponse> => {
+    let lastError;
+    for (let i = 0; i < retries; i++) {
+        try {
+            return await ai.models.generateContent(params);
+        } catch (error: any) {
+            lastError = error;
+            // 429: Resource Exhausted (Quota), 503: Service Unavailable
+            if (error.status === 429 || error.status === 503 || error.code === 429 || error.code === 503) {
+                const waitTime = 2000 * Math.pow(2, i); // 2s, 4s, 8s
+                console.warn(`API request failed (Status ${error.status || error.code}). Retrying in ${waitTime}ms...`);
+                await delay(waitTime);
+                continue;
+            }
+            // If it's not a transient error, throw immediately
+            throw error;
+        }
+    }
+    throw lastError;
+};
+
 export const parseTextForQuestions = async (text: string): Promise<Question[]> => {
     try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || " " });
 
         const prompt = PROMPT_TEMPLATE.replace('{{TEXT_CONTENT}}', text);
 
-        const response = await ai.models.generateContent({
+        const response = await generateContentWithRetry(ai, {
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
@@ -124,11 +149,21 @@ export const parseTextForQuestions = async (text: string): Promise<Question[]> =
             }
         });
         
+        if (!response.text) {
+            throw new Error("The AI returned an empty response. This usually indicates the content was blocked by safety settings.");
+        }
+
         const jsonResponse = JSON.parse(response.text);
         return addIds(jsonResponse);
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error parsing text with Gemini:", error);
-        throw new Error("Failed to parse questions. The format might be unsupported or the API key may be invalid.");
+        
+        // Provide better error message for UI
+        if (error.status === 429 || error.code === 429) {
+             throw new Error("The AI service is currently busy (Quota Exceeded). Please try again in a few moments.");
+        }
+        
+        throw new Error(`Failed to parse questions: ${error.message || "Unknown error"}`);
     }
 };
 
@@ -147,7 +182,7 @@ export const parseImageForQuestions = async (base64Image: string, mimeType: stri
             text: IMAGE_PROMPT
         };
 
-        const response = await ai.models.generateContent({
+        const response = await generateContentWithRetry(ai, {
             model: 'gemini-2.5-flash',
             contents: { parts: [textPart, imagePart] },
             config: {
@@ -156,10 +191,19 @@ export const parseImageForQuestions = async (base64Image: string, mimeType: stri
             }
         });
         
+        if (!response.text) {
+            throw new Error("The AI returned an empty response. This usually indicates the content was blocked by safety settings or the image was not clear.");
+        }
+        
         const jsonResponse = JSON.parse(response.text);
         return addIds(jsonResponse);
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error parsing image with Gemini:", error);
-        throw new Error("Failed to parse questions from image. The image may be unclear or the API key may be invalid.");
+        
+        if (error.status === 429 || error.code === 429) {
+             throw new Error("The AI service is currently busy (Quota Exceeded). Please try again in a few moments.");
+        }
+
+        throw new Error(`Failed to parse questions from image: ${error.message || "Unknown error"}`);
     }
 };

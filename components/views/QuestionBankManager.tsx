@@ -146,31 +146,51 @@ const QuestionBankManager: React.FC = () => {
 };
 
 const QuestionList: React.FC<{ bank: QuestionBank }> = ({ bank }) => {
-    const { setBanks, banks } = useAppContext();
+    const { setBanks, addToast } = useAppContext();
     const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
     const [showAddQuestions, setShowAddQuestions] = useState(false);
 
     const handleSaveQuestion = (updatedQuestion: Question) => {
-        const updatedQuestions = bank.questions.map(q => q.id === updatedQuestion.id ? updatedQuestion : q);
-        const updatedBanks = banks.map(b => b.id === bank.id ? { ...b, questions: updatedQuestions } : b);
-        setBanks(updatedBanks);
+        setBanks((prevBanks) => {
+            return prevBanks.map(b => {
+                if (b.id === bank.id) {
+                    const updatedQuestions = b.questions.map(q => q.id === updatedQuestion.id ? updatedQuestion : q);
+                    return { ...b, questions: updatedQuestions };
+                }
+                return b;
+            });
+        });
         setEditingQuestion(null);
+        addToast("Question saved", "success");
     };
 
     const handleDeleteQuestion = (questionId: string) => {
         if (window.confirm("Are you sure you want to delete this question?")) {
-            const updatedQuestions = bank.questions.filter(q => q.id !== questionId);
-            const updatedBanks = banks.map(b => b.id === bank.id ? { ...b, questions: updatedQuestions } : b);
-            setBanks(updatedBanks);
+            setBanks((prevBanks) => {
+                return prevBanks.map(b => {
+                    if (b.id === bank.id) {
+                        const updatedQuestions = b.questions.filter(q => q.id !== questionId);
+                        return { ...b, questions: updatedQuestions };
+                    }
+                    return b;
+                });
+            });
+            addToast("Question deleted", "success");
         }
     };
     
     const handleQuestionsAdded = useCallback((newQuestions: Question[]) => {
-        const updatedQuestions = [...bank.questions, ...newQuestions];
-        const updatedBanks = banks.map(b => b.id === bank.id ? { ...b, questions: updatedQuestions } : b);
-        setBanks(updatedBanks);
+        setBanks((prevBanks) => {
+            return prevBanks.map(b => {
+                if (b.id === bank.id) {
+                    return { ...b, questions: [...b.questions, ...newQuestions] };
+                }
+                return b;
+            });
+        });
         setShowAddQuestions(false);
-    }, [bank, banks, setBanks]);
+        addToast("Questions added", "success");
+    }, [bank.id, setBanks, addToast]);
 
     const renderQuestionContent = (q: Question) => {
         if (q.type === 'dropdown' && q.dropdowns) {

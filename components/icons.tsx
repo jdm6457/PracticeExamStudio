@@ -1,6 +1,9 @@
 import React from 'react';
 
-export interface IconProps extends React.SVGProps<SVGSVGElement> {}
+export interface IconProps extends React.SVGProps<SVGSVGElement> {
+  className?: string;
+  children?: React.ReactNode;
+}
 
 const defaultProps = {
   className: "w-5 h-5 inline-block",
