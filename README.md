@@ -97,7 +97,12 @@ Once installed, you can start the app.
 
 ## Troubleshooting
 
-*   **"npm is not recognized":** This means Node.js wasn't installed correctly. Try reinstalling Node.js and restarting your computer.
+*   **"npm is not recognized"** (Windows) or **"zsh: command not found: npm"** (macOS): This means Node.js isn't installed. Download and install it from [nodejs.org](https://nodejs.org/), then restart your terminal.
 *   **AI features aren't working:** Double-check your `.env` file. Ensure there are no spaces around the `=` sign and that the file is named exactly `.env` (not `.env.txt`).
 *   **Port already in use:** If the terminal says the port is busy, it will usually ask to run on a different port. Press `Y` (Yes) to proceed.
 *   **Blank Screen on Windows:** Ensure you are running `npm run dev` if `npm start` does not work, and check your browser console (F12) for errors.
+*   **Firewall Popup:** On Windows, you may see a firewall popup asking to allow Node.js to communicate. Allow access for Private networks to let the app run correctly.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
