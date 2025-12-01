@@ -21,17 +21,17 @@ Before running this application, you must have **Node.js** installed.
 
 ---
 
-## 🔑 Getting Your Google Gemini API Key (For AI Features)
+## 🔑 Getting Your Gemini API Key (For AI Features)
 
-This application uses the **Google Gemini API** to intelligently parse your study materials. **If you only plan to import existing JSON question banks, you can skip this step.**
+To use the AI features (like generating questions from images or text), this application requires a **Gemini API Key**. You can obtain this key for free via the **Google AI Studio** dashboard.
 
-1.  **Go to Google AI Studio:** [https://aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
+**Note:** If you only plan to manually create questions or import existing JSON files, you can skip this step.
+
+1.  **Get the Key:** Visit the [Google AI Studio API Key Manager](https://aistudio.google.com/app/apikey).
 2.  **Sign in** with your Google account.
 3.  Click **"Create API key"**.
-4.  Select **"Create API key in new project"** (or use an existing one if you have it).
-5.  **Copy the key** (it starts with `AIza...`).
-
-*Note: The API is free to use within rate limits, which are generous enough for personal use.*
+4.  Select **"Create API key in new project"** (or use an existing project).
+5.  **Copy the key** string (it starts with `AIza...`).
 
 ---
 
@@ -41,24 +41,26 @@ This application uses the **Google Gemini API** to intelligently parse your stud
 
 1.  **Download the Code:**
     *   If you downloaded a ZIP: Right-click the zip file and select "Extract All".
-    *   If using Git: Open Command Prompt and run `git clone [your-repo-url]`.
+    *   If using Git: Open **Git Bash** (recommended) or Command Prompt and run:
+        ```bash
+        git clone https://github.com/jdm6457/PracticeExamStudio.git
+        ```
 2.  **Open the Terminal:**
-    *   Open the folder where you extracted the files.
-    *   Click the address bar at the top of the folder window, type `cmd`, and press Enter. This opens a black Command Prompt window inside that folder.
+    *   Open the folder where you extracted/cloned the files.
+    *   Click the address bar at the top of the folder window, type `cmd`, and press Enter.
 3.  **Install Dependencies:**
     *   Type the following command and press Enter:
         ```bash
         npm install
         ```
-    *   *Note: This may take a minute or two.*
 
 ### 🍎 macOS / 🐧 Linux
 
 1.  **Download the Code:**
-    *   Download and unzip the file, or use `git clone`.
+    *   Download and unzip the file, or use `git clone https://github.com/jdm6457/PracticeExamStudio.git`.
 2.  **Open Terminal:**
     *   Open your Terminal app.
-    *   Navigate to the project folder: `cd path/to/folder`
+    *   Navigate to the project folder: `cd path/to/PracticeExamStudio`
 3.  **Install Dependencies:**
     *   Run the command:
         ```bash
@@ -67,9 +69,9 @@ This application uses the **Google Gemini API** to intelligently parse your stud
 
 ---
 
-## Configuration (Optional)
+## Configuration
 
-To enable AI parsing features (generating questions from text/images), configure your API Key.
+To enable the AI features, you must save your API Key in a configuration file.
 
 1.  In the project root folder (where `package.json` is), create a new file named `.env`.
 2.  Open this file with a text editor (Notepad, TextEdit, VS Code).
@@ -78,8 +80,6 @@ To enable AI parsing features (generating questions from text/images), configure
     API_KEY=AIzaSyYourActualApiKeyGoesHere
     ```
 4.  Save the file.
-
-*If you do not create this file, the app will still run, but you will receive errors if you try to use the "Parse Text" or "Upload File" features in the "Add Questions" menu.*
 
 ---
 
@@ -91,18 +91,19 @@ Once installed, you can start the app.
     ```bash
     npm start
     ```
-    *(Note: If `npm start` fails on Windows, try `npm run dev`)*
-2.  The terminal will show a local address (usually `http://localhost:3000` or `http://localhost:1234`).
-3.  Open your web browser and visit that address to use the app.
+2.  The terminal will show a local address (usually `http://localhost:3000`).
+3.  Open your web browser and visit that address.
+
+**Note on Data:** Your Question Banks and History are saved automatically to your browser's internal database (IndexedDB). You can close the server or restart your computer, and your data will persist.
 
 ## Troubleshooting
 
 *   **"npm is not recognized"** (Windows) or **"zsh: command not found: npm"** (macOS): This means Node.js isn't installed. Download and install it from [nodejs.org](https://nodejs.org/), then restart your terminal.
 *   **AI features aren't working:** Double-check your `.env` file. Ensure there are no spaces around the `=` sign and that the file is named exactly `.env` (not `.env.txt`).
-*   **Port already in use:** If the terminal says the port is busy, it will usually ask to run on a different port. Press `Y` (Yes) to proceed.
-*   **Blank Screen on Windows:** Ensure you are running `npm run dev` if `npm start` does not work, and check your browser console (F12) for errors.
-*   **Firewall Popup:** On Windows, you may see a firewall popup asking to allow Node.js to communicate. Allow access for Private networks to let the app run correctly.
+*   **Port already in use:** If the terminal says the port is busy, press `Y` (Yes) to run on a different port.
+*   **Blank Screen on Windows:** Ensure you ran `npm install` successfully. Check the browser console (F12) for errors.
+*   **Firewall Popup:** On Windows, allow Node.js to communicate on Private networks if prompted.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) file for details.
